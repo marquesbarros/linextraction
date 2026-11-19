@@ -1,6 +1,8 @@
 # linextraction
 
-Extração de candidatos a lineamentos topográficos em relevos sombreados do SRTM. Um único [notebook Jupyter](Extracao_de_lineamentos_SRTM.ipynb) baixa o modelo de elevação para a área escolhida, gera os hillshades, detecta segmentos retilíneos por iluminação e exporta os dados vetoriais e as figuras.
+Extração de candidatos a lineamentos topográficos em relevos sombreados do SRTM. O notebook baixa o modelo de elevação, gera os hillshades, detecta segmentos retilíneos por iluminação e exporta os dados vetoriais e as figuras.
+
+[Notebook em português](Extracao_de_lineamentos_SRTM.ipynb) · [English notebook](SRTM_Lineament_Extraction.ipynb)
 
 ## Como executar
 
@@ -10,7 +12,7 @@ Extração de candidatos a lineamentos topográficos em relevos sombreados do SR
 4. Edite `ILUMINACOES`. Cada par `(azimute, elevação do Sol)` gera um hillshade e uma análise independente. Os ângulos estão em graus, com o azimute medido a partir do norte da grade UTM e a elevação medida acima do horizonte.
 5. Execute as células em ordem, com a pasta do notebook como diretório de trabalho do kernel. Na primeira execução, o GMT baixa os dados de elevação. O notebook exibe a tabela de conferência, os painéis por iluminação e as figuras combinadas.
 
-O exemplo da **Serra da Canastra (MG)** usa os cantos `(-20.36, -46.72)` e `(-20.11, -46.31)`, quatro iluminações e um comprimento mínimo de 600 m. A execução de referência encontrou 480 segmentos, 120 por iluminação no ajuste padrão de sensibilidade muito alta.
+O exemplo da **Serra da Canastra (MG)** usa os cantos `(-20.36, -46.72)` e `(-20.11, -46.31)`, azimutes de 45°, 135°, 225° e 315° com elevação solar de 45° e um comprimento mínimo de 600 m. A execução de referência encontrou 480 segmentos, 120 por iluminação no ajuste padrão de sensibilidade muito alta.
 
 ## Arquivos gerados
 
@@ -30,12 +32,13 @@ linextraction_resultados/
     │   ├── comparacao_iluminacoes.png
     │   └── mapa_combinado.png
     └── rosetas/
-        ├── hillshade_az*_alt*.png
-        ├── comparacao_rosetas.png
-        └── roseta_combinada.png
+        ├── segmentos/
+        └── frequencia/
 ```
 
-O SRTM é exportado em WGS84. Os hillshades e as geometrias usam a zona UTM local. Cada nova execução com o mesmo nome recebe um sufixo como `_02`. Os painéis de comparação mantêm a ordem das iluminações, com até quatro imagens por linha.
+O SRTM é exportado em WGS84. Os hillshades e as geometrias usam a zona UTM local. Cada nova execução com o mesmo nome recebe um sufixo como `_02`. Os painéis de comparação mantêm a ordem das iluminações, com até quatro imagens por linha e rótulos no formato `Az/Dip`. A cor de cada iluminação é compartilhada entre as sobreposições, as rosetas e os gráficos cartesianos.
+
+Cada pasta de rosetas contém as figuras individuais, `comparacao_rosetas.png`, `roseta_combinada.png` e `comparacao_cartesiana.png`. Em `segmentos/`, a métrica é a contagem por classe. Em `frequencia/`, é a soma dos comprimentos em metros por classe. As rosetas mostram percentuais do total da métrica e usam uma escala radial comum por métrica. Os gráficos cartesianos mostram valores absolutos.
 
 O CSV e o Shapefile contêm os mesmos atributos.
 
@@ -51,7 +54,7 @@ O CSV e o Shapefile contêm os mesmos atributos.
 
 O SRTM de 1 segundo de arco é reprojetado para UTM antes do cálculo do sombreamento e da declividade. A detecção usa um filtro de Sato para realçar faixas escuras alongadas e a transformada de Hough probabilística para propor segmentos. O ajuste transversal aproxima os segmentos dos eixos escuros e recorta trechos com apoio insuficiente. Na sensibilidade padrão, uma busca complementar realça eixos escuros mais estreitos. [SRTMGL1 V003](https://doi.org/10.5067/MEaSUREs/SRTM/SRTMGL1.003) · [Dados SRTM via GMT](https://www.generic-mapping-tools.org/remote-datasets/srtm-relief.html) · [Filtro de Sato](https://doi.org/10.1016/S1361-8415(98)80009-1)
 
-O mapa combinado coloca todos os segmentos em vermelho sobre a média dos hillshades. A roseta combinada conta todos os segmentos exportados em classes axiais de 15°. Uma feição detectada sob mais de uma iluminação pode contribuir várias vezes. A interpretação estrutural dos candidatos requer evidências geológicas independentes.
+O mapa combinado coloca os segmentos na cor da iluminação de origem sobre a média dos hillshades. As duas métricas usam as mesmas 36 classes axiais de 5° no intervalo de 0° a 180°. Uma feição detectada sob mais de uma iluminação pode contribuir várias vezes. A interpretação estrutural dos candidatos requer evidências geológicas independentes.
 
 ## Licença
 
