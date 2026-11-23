@@ -13,9 +13,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import linextraction_dem as dem
 
 
-def make_dem(path, value, lon):
+def make_dem(path, value, lon, crs="EPSG:4326"):
     with rasterio.open(path, 'w', driver='GTiff', width=120, height=120, count=1,
-                       dtype='float32', crs='EPSG:4326', nodata=np.nan,
+                       dtype='float32', crs=crs, nodata=np.nan,
                        transform=from_origin(lon, -20, 1/120, 1/120)) as dst:
         dst.write(np.full((120, 120), value, dtype=np.float32), 1)
 
@@ -89,3 +89,54 @@ def test_invalid_region_and_model(tmp_path):
         dem.download_copernicus((-46, -47, -21, -20), tmp_path / 'test.tif')
     with pytest.raises(ValueError, match='desconhecido'):
         dem.download_alternative_dem('palsar', (-47, -46, -21, -20), tmp_path / 'test.tif')
+
+@pytest.mark.parametrize("environment_key", ["", "configured-key"])
+def test_opentopography_prompt_only_when_key_is_missing(tmp_path, monkeypatch, environment_key):
+    monkeypatch.setenv("OPENTOPOGRAPHY_API_KEY", environment_key)
+    source = tmp_path / "source.tif"
+    make_dem(source, 150, -47)
+    output = tmp_path / "alos.tif"
+    expected_key = environment_key or "prompt-key"
+
+    with (
+        patch.object(dem, "getpass", return_value="prompt-key") as prompt,
+        patch.object(dem, "urlopen", return_value=io.BytesIO(source.read_bytes())) as request,
+    ):
+        dem.download_alternative_dem(
+            "alos", (-47, -46, -21, -20), output, key_prompt="Paste API key: ",
+        )
+        assert f"API_Key={expected_key}" in request.call_args.args[0].full_url
+
+    assert prompt.call_count == int(not environment_key)
+    assert output.is_file()
+
+
+@pytest.mark.parametrize(
+    ("demtype", "crs", "accepted"),
+    [
+        ("ANADEM", "EPSG:4674", True),
+        ("ANADEM", "EPSG:4326", True),
+        ("ANADEM", "EPSG:3857", False),
+        ("AW3D30", "EPSG:4674", False),
+    ],
+)
+def test_opentopography_preserves_supported_crs(tmp_path, demtype, crs, accepted):
+    source = tmp_path / "source.tif"
+    make_dem(source, 150, -47, crs=crs)
+    output = tmp_path / "output.tif"
+
+    with patch.object(dem, "urlopen", return_value=io.BytesIO(source.read_bytes())):
+        if not accepted:
+            with pytest.raises(ValueError, match=crs):
+                dem.download_opentopography(
+                    (-47, -46, -21, -20), output, demtype=demtype, api_key="test-key",
+                )
+            assert not output.exists()
+            return
+        dem.download_opentopography(
+            (-47, -46, -21, -20), output, demtype=demtype, api_key="test-key",
+        )
+
+    assert output.read_bytes() == source.read_bytes()
+    with rasterio.open(output) as dataset:
+        assert dataset.crs.to_string() == crs

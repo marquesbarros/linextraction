@@ -1,10 +1,11 @@
 """Aquisição complementar de MDEs para o LinExtraction.
 
-Os rasters são devolvidos como GeoTIFF em EPSG:4326, compatíveis com
-reproject_to_utm dos notebooks. O caminho original do SRTM/GMT não muda.
+Os rasters são devolvidos como GeoTIFF geográficos, compatíveis com
+reproject_to_utm dos notebooks. O ANADEM pode manter SIRGAS 2000. O caminho original do SRTM/GMT não muda.
 """
 
 from contextlib import ExitStack
+from getpass import getpass
 from math import ceil, floor, isfinite
 from os import environ, replace
 from pathlib import Path
@@ -81,13 +82,15 @@ def download_copernicus(region, destination):
     return dest
 
 
-def download_opentopography(region, destination, *, demtype, api_key=None):
+def download_opentopography(region, destination, *, demtype, api_key=None, key_prompt=None):
     """Baixa AW3D30 ou ANADEM por recorte WGS84 no OpenTopography."""
     if demtype not in {"AW3D30", "ANADEM"}:
         raise ValueError("Modelo não suportado pelo adaptador OpenTopography.")
     west, south, east, north = _bounds(region)
     key = api_key if api_key is not None else environ.get("OPENTOPOGRAPHY_API_KEY", "")
-    if not key or not key.strip():
+    if not key.strip() and key_prompt is not None:
+        key = getpass(key_prompt)
+    if not key.strip():
         raise ValueError(
             "Para AW3D30/ANADEM, defina OPENTOPOGRAPHY_API_KEY no ambiente. "
             "Chave gratuita: https://www.opentopography.org/developers"
@@ -117,8 +120,11 @@ def download_opentopography(region, destination, *, demtype, api_key=None):
 
         try:
             with rasterio.open(temp) as src:
-                if src.crs is None or src.crs.to_epsg() != 4326:
-                    raise ValueError(f"O retorno de {demtype} não está em EPSG:4326.")
+                accepted_crs = (4326, 4674) if demtype == "ANADEM" else (4326,)
+                if src.crs is None or src.crs.to_epsg() not in accepted_crs:
+                    expected = " ou ".join(f"EPSG:{epsg}" for epsg in accepted_crs)
+                    received = str(src.crs) if src.crs is not None else "ausente"
+                    raise ValueError(f"CRS do retorno de {demtype}: {received}. Esperado: {expected}.")
                 if min(src.width, src.height) < 2 or not src.read(1, masked=True).count():
                     raise ValueError(f"O retorno de {demtype} não possui elevação válida.")
         except rasterio.errors.RasterioIOError as exc:
@@ -134,11 +140,11 @@ def download_opentopography(region, destination, *, demtype, api_key=None):
             temp.unlink(missing_ok=True)
 
 
-def download_alternative_dem(model, region, destination):
+def download_alternative_dem(model, region, destination, *, key_prompt=None):
     """Seleciona apenas modelos complementares; SRTM permanece no GMT."""
     model = model.strip().lower()
     if model == "copernicus":
         return download_copernicus(region, destination)
     if model in ("alos", "anadem"):
-        return download_opentopography(region, destination, demtype=MODELS[model])
+        return download_opentopography(region, destination, demtype=MODELS[model], key_prompt=key_prompt)
     raise ValueError("Modelo de elevação desconhecido. Use srtm, copernicus, alos ou anadem.")
