@@ -14,6 +14,36 @@ Extração de candidatos a lineamentos topográficos em relevos sombreados do SR
 
 O exemplo da **Serra da Canastra (MG)** usa os cantos `(-20.36, -46.72)` e `(-20.11, -46.31)`, azimutes de 45°, 135°, 225° e 315° com elevação solar de 45° e um comprimento mínimo de 600 m. A execução de referência encontrou 480 segmentos, 120 por iluminação no ajuste padrão de sensibilidade muito alta.
 
+## Fontes alternativas de elevação
+
+O SRTM continua sendo o **padrão**. A aquisição por GMT, os parâmetros de iluminação, a reprojeção, a extração e as exportações continuam iguais. Nas células de parâmetros, selecione a fonte:
+
+```python
+MODELO_ELEVACAO = "srtm"  # Notebook português
+# ELEVATION_MODEL = "srtm"  # English notebook
+```
+
+| Opção | Produto | Acesso | Autenticação |
+| --- | --- | --- | --- |
+| `srtm` | SRTMGL1 (30 m) | GMT, fluxo original | Não |
+| `copernicus` | Copernicus GLO-30 | AWS, leitura COG remota | Não |
+| `alos` | ALOS World 3D AW3D30 | OpenTopography | Chave gratuita |
+| `anadem` | ANADEM (América do Sul) | OpenTopography | Chave gratuita |
+
+Para `alos` e `anadem`, solicite a chave em https://www.opentopography.org/developers e configure **antes de abrir o Jupyter**:
+
+```powershell
+$env:OPENTOPOGRAPHY_API_KEY = "sua_chave"
+```
+
+No Linux/macOS: `export OPENTOPOGRAPHY_API_KEY="sua_chave"`.
+
+O SRTM mantém o arquivo `srtm/srtm.tif`. Para as demais fontes, o arquivo é armazenado em `dem/<modelo>.tif`; o GeoTIFF de entrada fica em WGS84 e o notebook usa a mesma reprojeção UTM de antes. O nome da fonte e o SHA-256 do arquivo são apresentados durante a execução.
+
+**ALOS aqui significa AW3D30**, modelo de elevação de 30 m; não corresponde à imagem radar ALOS PALSAR RTC de 12,5 m. A grade de análise do detector permanece de aproximadamente 90 m na busca principal e 60 m na complementar, mesmo quando a fonte de elevação é alterada.
+
+Testes sem Internet, usando GeoTIFFs sintéticos: `python -m pytest -q tests/test_linextraction_dem.py`. O acesso remoto real ao AWS ou ao OpenTopography deve ser validado em uma execução com conexão.
+
 ## Arquivos gerados
 
 ```text
