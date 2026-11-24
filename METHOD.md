@@ -85,7 +85,7 @@ $Z_{ab}$ e $Z(u,v)$ são alturas em metros. O GDAL trata as amostras inválidas 
 
 **Correspondência com o código.** `hillshade`, `terrain_slope` e `make_hillshades`, células 8–9. A formulação lambertiana é fundamentada no mapa de reflectância discutido por Horn. O estêncil usado é o de `numpy.gradient`, com diferenças centrais no interior e diferenças unilaterais de primeira ordem nas bordas da matriz. A rotina não chama `gdaldem hillshade` nem o estêncil ponderado $3\times3$ frequentemente associado a Horn. [Horn (1981)](REFERENCES.md#horn-1981) · [NumPy/SciPy](REFERENCES.md#numpy-scipy)
 
-Considere a matriz $Z_{ij}$, com altura em metros, coluna $j$ crescente para leste e linha $i$ crescente para sul. As derivadas discretas são $p = \partial Z/\partial x_{\text{leste}}$ e $q=\partial Z/\partial y_{\text{sul}}$, obtidas dividindo as diferenças em cada eixo pelo espaçamento em metros. Por exemplo, $p_{ij}=(Z_{i,j+1}-Z_{i,j-1})/(2\Delta_x)$ no interior. As duas derivadas têm unidade m/m. O código calcula a inclinação $\beta=\arctan\sqrt{p^2+q^2}$, o ângulo de aspecto interno $\psi=\operatorname{atan2}(q,-p)$ e converte o azimute de grade para $\gamma=(450^\circ-A)$ em radianos. Com $h$ convertido em radianos, obtém:
+Considere a matriz $Z_{ij}$, com altura em metros, coluna $j$ crescente para leste e linha $i$ crescente para sul. As derivadas discretas são $p = \partial Z/\partial x_{\text{leste}}$ e $q=\partial Z/\partial y_{\text{sul}}$, obtidas dividindo as diferenças em cada eixo pelo espaçamento em metros. Por exemplo, $p_{ij}=(Z_{i,j+1}-Z_{i,j-1})/(2\Delta_x)$ no interior. As duas derivadas têm unidade m/m. O código calcula a inclinação $\beta=\arctan\sqrt{p^2+q^2}$, o ângulo de aspecto interno $\psi=\mathrm{atan2}(q,-p)$ e converte o azimute de grade para $\gamma=(450^\circ-A)$ em radianos. Com $h$ convertido em radianos, obtém:
 
 $$
 I=\sin h\cos\beta+\cos h\sin\beta\cos(\gamma-\psi)
@@ -93,7 +93,7 @@ I=\sin h\cos\beta+\cos h\sin\beta\cos(\gamma-\psi)
  {\sqrt{1+p^2+q^2}}.
 $$
 
-Na forma à direita, $A$ também está em radianos. $I$ é a projeção adimensional do vetor unitário de luz sobre a normal à superfície. O GeoTIFF armazena $H=\operatorname{uint8}[\operatorname{clip}(255I,0,255)]$, com truncamento da parte fracionária. A iluminação é artificial e local, com intensidade dependente da normal e sem simulação de oclusão por outras partes do terreno. Um plano horizontal tem $I=\sin h$. A componente azimutal diminui para elevações altas e depende da orientação das vertentes. Assim, luzes opostas podem salientar lados distintos da mesma feição. [Horn (1981)](REFERENCES.md#horn-1981) · [Smith e Clark (2005)](REFERENCES.md#smith-clark-2005) · [Šilhavý et al. (2016)](REFERENCES.md#silhavy-2016)
+Na forma à direita, $A$ também está em radianos. $I$ é a projeção adimensional do vetor unitário de luz sobre a normal à superfície. O GeoTIFF armazena $H=\mathrm{uint8}[\mathrm{clip}(255I,0,255)]$, com truncamento da parte fracionária. A iluminação é artificial e local, com intensidade dependente da normal e sem simulação de oclusão por outras partes do terreno. Um plano horizontal tem $I=\sin h$. A componente azimutal diminui para elevações altas e depende da orientação das vertentes. Assim, luzes opostas podem salientar lados distintos da mesma feição. [Horn (1981)](REFERENCES.md#horn-1981) · [Smith e Clark (2005)](REFERENCES.md#smith-clark-2005) · [Šilhavý et al. (2016)](REFERENCES.md#silhavy-2016)
 
 No sombreado, células originalmente mascaradas são preenchidas com a média válida para o cálculo das derivadas. A máscara válida sofre uma erosão binária de uma iteração, com conectividade ortogonal padrão e `border_value=1`. Isso remove vizinhanças ortogonais de vazios internos, preservando a regra unilateral no limite externo. O GeoTIFF usa a máscara de validade e reserva o valor zero como intensidade legítima. Em separado, `terrain_slope` aplica filtro gaussiano com $\sigma=2$ células à matriz de alturas com o mesmo preenchimento e calcula
 
@@ -110,7 +110,7 @@ $G$ é a razão entre desnível e distância horizontal em m/m, com a derivada c
 **Correspondência com o código.** `_detect_at_scale`, `_detect_dark_axes` e `detect_segments`, células 11–13. Define-se $d$, em metros, como `src.res[0]`, o espaçamento horizontal do hillshade. Para resolução-alvo $d_\ast=90$ m na busca principal ou 60 m na complementar, o passo $k$ e o espaçamento efetivo $s$ são
 
 $$
-k=\max(1,\operatorname{round}(d_\ast/d)),\qquad
+k=\max(1,\mathrm{round}(d_\ast/d)),\qquad
 s=kd,\qquad \ell_{\min}=L_{\min}/s.
 $$
 
@@ -133,8 +133,8 @@ Nos dois modos de `_detect_at_scale`, a imagem de base é $J_s=\mathcal G_{0.85}
 $$
 \begin{aligned}
 P&=\max(\mathcal G_b*J-J_s,\ 0),&W&=\sqrt{R(J_s)P},\\
-D&=\operatorname{clip}\bigl((\operatorname{mediana}_M(J_s)-J_s)/0.30,\ 0,\ 1\bigr),&
-W_s&=W(0.65+0.35D)\bigl[1+0.20\operatorname{clip}(G/0.35,\ 0,\ 1)\bigr].
+D&=\mathrm{clip}\bigl((\mathrm{mediana}_M(J_s)-J_s)/0.30,\ 0,\ 1\bigr),&
+W_s&=W(0.65+0.35D)\bigl[1+0.20\mathrm{clip}(G/0.35,\ 0,\ 1)\bigr].
 \end{aligned}
 $$
 
@@ -166,7 +166,7 @@ O LinExtraction chama `probabilistic_hough_line` com `rng=0` em cada passagem, s
 A direção do maior autovalor algébrico da Hessiana de $J_s$ é
 
 $$
-\eta=\tfrac12\operatorname{atan2}(2J_{xy},J_{xx}-J_{yy}).
+\eta=\tfrac12\mathrm{atan2}(2J_{xy},J_{xx}-J_{yy}).
 $$
 
 Os termos $J_{xx},J_{yy},J_{xy}$ são segundas derivadas gaussianas em coordenadas da imagem. O desvio-padrão é de duas células em `_detect_at_scale` e de 1,55 célula em `_detect_dark_axes`. O ângulo $\eta$, em radianos, define um eixo normal local, com equivalência sob rotação de $\pi$. A Hessiana é calculada separadamente da resposta multiescala de Sato. [Sato et al. (1998)](REFERENCES.md#sato-1998) · [NumPy/SciPy](REFERENCES.md#numpy-scipy)
@@ -205,14 +205,14 @@ $$
 
 com $(\alpha,b_0,b_1)=(1,0{,}72,0{,}28)$ na busca principal e $(0{,}72,0{,}42,0{,}58)$ nas buscas finas. O escore é usado para ordenar candidatos dentro de cada busca. Ele combina uma potência de extensão em células com fatores adimensionais. Sua interpretação é de prioridade algorítmica, sem calibração probabilística. O código ordena em ordem decrescente de $\mathcal Q$ e usa as coordenadas das extremidades como desempate.
 
-Em `_detect_at_scale`, a orientação em coordenadas da imagem é dividida em 12 classes axiais pelo arredondamento de $12\operatorname{atan2}(\Delta y,\Delta x)/\pi$ módulo 12. Um segmento aceito ocupa o entorno $3\times3$ das estações arredondadas, registrado em uma máscara de bits para sua classe. Rejeita-se um novo trecho se mais de 53% de suas estações arredondadas incidirem em células já ocupadas pela sua classe ou pelas duas adjacentes. A seleção para ao atingir o teto da busca. As classes internas de 15° são exclusivas desse teste espacial. As rosetas de saída usam uma divisão de 5° a partir de azimutes geodésicos.
+Em `_detect_at_scale`, a orientação em coordenadas da imagem é dividida em 12 classes axiais pelo arredondamento de $12\mathrm{atan2}(\Delta y,\Delta x)/\pi$ módulo 12. Um segmento aceito ocupa o entorno $3\times3$ das estações arredondadas, registrado em uma máscara de bits para sua classe. Rejeita-se um novo trecho se mais de 53% de suas estações arredondadas incidirem em células já ocupadas pela sua classe ou pelas duas adjacentes. A seleção para ao atingir o teto da busca. As classes internas de 15° são exclusivas desse teste espacial. As rosetas de saída usam uma divisão de 5° a partir de azimutes geodésicos.
 
 Em `_add_distinct_segments`, já na grade do hillshade antes da decimação, um candidato é amostrado uniformemente nos extremos e ao longo da extensão, com $\max(2,\lceil L_p d/60\rceil+1)$ pontos. $L_p$ é seu comprimento em células da grade do hillshade, $d$ o espaçamento em metros e 60 a distância de referência em metros. Compara-se apenas com segmentos aceitos cuja diferença axial é de até 20°. Para um ponto $X$ e um segmento aceito de origem $P$ e vetor $v$, usa-se a distância em células
 
 $$
 D(X,P,v)=\bigl\|X-P-\tau v\bigr\|_2,
 \qquad
-\tau=\operatorname{clip}\left(\frac{(X-P)\cdot v}{v\cdot v},0,1\right).
+\tau=\mathrm{clip}\left(\frac{(X-P)\cdot v}{v\cdot v},0,1\right).
 $$
 
 Rejeita-se o candidato se pelo menos 45% de suas amostras estiverem a até $120/d$ células de qualquer segmento aceito elegível. O limiar de 120 m corresponde à escala métrica assumida pela rotina de deduplicação. A comparação é com segmentos finitos, e candidatos novos podem ser rejeitados em relação a segmentos inicialmente aceitos ou incorporados no mesmo percurso de seleção.
@@ -227,7 +227,7 @@ $$
 S_{\mathrm{escuro}}=\sqrt{R(J_s)P}(0.36+0.64D).
 $$
 
-A elegibilidade $U$ exige máscara interior, $P>0{,}028$, $D>0{,}10$ e $S_{\mathrm{escuro}}>0$. O limiar $T=\max[Q_{0.94}(S_{\mathrm{escuro}}\mid M),Q_{0.12}(S_{\mathrm{escuro}}\mid U)]$ produz dois esqueletos com cortes de $0{,}82T$ e $1{,}22T$. A PPHT usa $\max(7,\operatorname{round}(0.7\ell_{\min}))$ votos, lacuna $\max(3,\operatorname{round}(185/s))$ em passos de imagem e comprimento mínimo de proposta $m_H$. O valor 185 está em metros. No ajuste, o escore de suporte é zerado fora de $U$, a normal local usa $\sigma=1{,}55$ e a cobertura mínima é 0,72. Essa busca especializada usa somente o hillshade. [Implementação nas células 11–13](Extracao_de_lineamentos_SRTM.ipynb)
+A elegibilidade $U$ exige máscara interior, $P>0{,}028$, $D>0{,}10$ e $S_{\mathrm{escuro}}>0$. O limiar $T=\max[Q_{0.94}(S_{\mathrm{escuro}}\mid M),Q_{0.12}(S_{\mathrm{escuro}}\mid U)]$ produz dois esqueletos com cortes de $0{,}82T$ e $1{,}22T$. A PPHT usa $\max(7,\mathrm{round}(0.7\ell_{\min}))$ votos, lacuna $\max(3,\mathrm{round}(185/s))$ em passos de imagem e comprimento mínimo de proposta $m_H$. O valor 185 está em metros. No ajuste, o escore de suporte é zerado fora de $U$, a normal local usa $\sigma=1{,}55$ e a cobertura mínima é 0,72. Essa busca especializada usa somente o hillshade. [Implementação nas células 11–13](Extracao_de_lineamentos_SRTM.ipynb)
 
 A reserva de candidatos da busca complementar vale o maior valor entre o teto principal e cinco vezes o teto complementar, ou 120 no padrão. A rotina de eixos escuros ordena os candidatos, elimina redundância interna pela tolerância de 120 m e os oferece à seleção, que preserva os segmentos principais e acrescenta apenas segmentos suficientemente distintos. Se ainda houver vagas, executa-se `_detect_at_scale(..., fine=True)`, com alvo de 60 m, erosão de três células, os parâmetros por sensibilidade da seção 4 e o ajuste fino da seção 5. Esse recurso pode usar a declividade para as sementes, como a busca principal. Os novos segmentos passam pelo mesmo teste de distinção contra os já aceitos e respeitam as vagas restantes. O total por iluminação no padrão é, portanto, de até 120 segmentos. O código pode devolver menos. [Implementação nas células 11–13](Extracao_de_lineamentos_SRTM.ipynb)
 
